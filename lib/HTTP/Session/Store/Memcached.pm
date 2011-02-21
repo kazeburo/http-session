@@ -19,9 +19,17 @@ sub new {
     bless {%args}, $class;
 }
 
+sub _filter_sid($) {
+    my $session_id = shift;
+    if ($session_id =~ /[\0\r\n]/ || length($session_id) > 250) {
+        die "detected memcached injection: $session_id";
+    }
+    return $session_id;
+}
+
 sub select {
     my ( $self, $session_id ) = @_;
-    my $data = $self->memd->get(_filter_sid($session_id));
+    my $data = $self->memd->get(_filter_sid $session_id);
 }
 
 sub insert {
@@ -40,11 +48,6 @@ sub delete {
 }
 
 sub cleanup { Carp::croak "This storage doesn't support cleanup" }
-
-sub _filter_sid {
-    my $session_id = shift;
-    substr( Digest::SHA1::sha1_hex( $session_id ), 0, 32 );
-}
 
 1;
 __END__
@@ -65,7 +68,7 @@ HTTP::Session::Store::Memcached - store session data in memcached
 
 =head1 DESCRIPTION
 
-store session data in memcached
+store session data in memcached.
 
 =head1 CONFIGURATION
 
